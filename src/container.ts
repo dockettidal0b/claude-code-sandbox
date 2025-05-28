@@ -508,7 +508,15 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
       })
         .trim()
         .split("\n")
-        .filter((f: string) => f);
+        .filter((f: string) => f)
+        .filter((f: string) => {
+          // Filter out macOS metadata files
+          const basename = path.basename(f);
+          return !basename.startsWith("._") && 
+                 basename !== ".DS_Store" && 
+                 basename !== ".AppleDouble" &&
+                 basename !== ".LSOverride";
+        });
 
       // Get list of untracked files that aren't ignored (only if includeUntracked is true)
       let untrackedFiles: string[] = [];
@@ -519,7 +527,15 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
         })
           .trim()
           .split("\n")
-          .filter((f: string) => f);
+          .filter((f: string) => f)
+          .filter((f: string) => {
+            // Filter out macOS metadata files
+            const basename = path.basename(f);
+            return !basename.startsWith("._") && 
+                   basename !== ".DS_Store" && 
+                   basename !== ".AppleDouble" &&
+                   basename !== ".LSOverride";
+          });
       }
 
       // Combine all files
@@ -534,8 +550,10 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
       const fileListPath = `/tmp/claude-sandbox-files-${Date.now()}.txt`;
       fs.writeFileSync(fileListPath, allFiles.join("\n"));
 
+      // Exclude macOS resource fork files (._*) from the archive
+      // Note: tar exclusions must come after -cf on macOS
       execSync(
-        `tar ${TAR_OWNER_FLAGS} -cf "${tarFile}" --files-from="${fileListPath}"`,
+        `tar ${TAR_OWNER_FLAGS} -cf "${tarFile}" --exclude="._*" --exclude=".DS_Store" --exclude=".AppleDouble" --exclude=".LSOverride" --files-from="${fileListPath}"`,
         { cwd: workDir, stdio: "pipe" },
       );
       fs.unlinkSync(fileListPath); // cleanup the temp list
@@ -569,7 +587,7 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
       // Create .git archive with correct ownership and exclude macOS resource fork files
       // Using the same ownership flags ensures git files are also owned by claude user
       execSync(
-        `tar ${TAR_OWNER_FLAGS} -cf "${gitTarFile}" --exclude="._*" .git`,
+        `tar ${TAR_OWNER_FLAGS} -cf "${gitTarFile}" --exclude="._*" --exclude=".DS_Store" .git`,
         { cwd: workDir, stdio: "pipe" },
       );
 

@@ -231,6 +231,9 @@ export class ShadowRepository {
         }
       }
 
+      // Add macOS specific excludes
+      excludes.push("._*", ".AppleDouble", ".LSOverride", "*.swp", "*~", ".*.sw?");
+      
       // Write excludes to file
       await fs.writeFile(this.rsyncExcludeFile, excludes.join("\n"));
       console.log(
@@ -343,6 +346,35 @@ export class ShadowRepository {
     }
 
     console.log(chalk.green("✓ Files synced successfully"));
+    
+    // Stage all changes including deletions to ensure they're tracked
+    try {
+      // First, add all new and modified files
+      await execAsync("git add -A", { cwd: this.shadowPath });
+      
+      // Then explicitly check for deleted files and stage them
+      const { stdout: deletedFiles } = await execAsync(
+        "git ls-files --deleted",
+        { cwd: this.shadowPath }
+      );
+      
+      if (deletedFiles.trim()) {
+        const files = deletedFiles.trim().split("\n");
+        console.log(chalk.gray(`  Detected ${files.length} deleted files`));
+        // Stage each deleted file
+        for (const file of files) {
+          if (file.trim()) {
+            try {
+              await execAsync(`git rm --cached "${file}"`, { cwd: this.shadowPath });
+            } catch (e) {
+              // File might already be staged for deletion
+            }
+          }
+        }
+      }
+    } catch (stagingError) {
+      console.log(chalk.yellow("  Warning: Could not stage all changes:", stagingError));
+    }
   }
 
   private async checkRsyncInContainer(containerId: string): Promise<boolean> {
@@ -414,7 +446,8 @@ export class ShadowRepository {
     );
 
     // Rsync within container to staging area using exclude file
-    const rsyncCmd = `docker exec ${containerId} rsync -av --delete \
+    // Use --delete-after to ensure deletions are properly handled
+    const rsyncCmd = `docker exec ${containerId} rsync -av --delete-after \
       --exclude-from=${containerExcludeFile} \
       ${containerPath}/ ${tempDir}/`;
 
@@ -465,12 +498,34 @@ export class ShadowRepository {
 
       // Use rsync on host to copy files using exclude file
       try {
+        // Use --delete-after and --whole-file for better deletion tracking
         await execAsync(
-          `rsync -av --exclude-from=${this.rsyncExcludeFile} ${tempCopyPath}/ ${this.shadowPath}/`,
+          `rsync -av --delete-after --whole-file --exclude-from=${this.rsyncExcludeFile} ${tempCopyPath}/ ${this.shadowPath}/`,
         );
       } catch (rsyncError) {
         // Fallback to cp if rsync not available on host
         console.log(chalk.gray("  (rsync not available on host, using cp)"));
+        
+        // First, detect and remove files that no longer exist in source
+        try {
+          const { stdout: shadowFiles } = await execAsync(
+            `find ${this.shadowPath} -type f -not -path "*/.git/*"`,
+          );
+          const existingShadowFiles = shadowFiles.trim().split("\n").filter(f => f);
+          
+          for (const shadowFile of existingShadowFiles) {
+            const relativePath = path.relative(this.shadowPath, shadowFile);
+            const sourcePath = path.join(tempCopyPath, relativePath);
+            
+            // If file doesn't exist in source, remove it from shadow
+            if (!await fs.pathExists(sourcePath)) {
+              await fs.remove(shadowFile);
+              console.log(chalk.gray(`  Removed deleted file: ${relativePath}`));
+            }
+          }
+        } catch (cleanupError) {
+          console.log(chalk.yellow("  Warning: Could not clean deleted files"));
+        }
 
         // Manual copy excluding directories - read exclude patterns
         const excludeContent = await fs.readFile(
