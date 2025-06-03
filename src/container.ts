@@ -891,6 +891,46 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
     const startupScript =
       defaultShell === "claude"
         ? `#!/bin/bash
+# Configure proxychains4 if proxy settings are provided
+if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
+  if [ ! -f /etc/proxychains4/proxychains.conf ]; then
+    echo "Setting up proxychains4 configuration..."
+    sudo mkdir -p /etc/proxychains4
+    # Check if proxy host is host.docker.internal and resolve it
+    RESOLVED_PROXY_HOST="$SOCKS5_PROXY_HOST"
+    if [ "$SOCKS5_PROXY_HOST" = "host.docker.internal" ]; then
+      RESOLVED_PROXY_HOST=$(getent hosts host.docker.internal | awk '{ print $1 }')
+    fi
+    if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
+      # With authentication
+      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PROXY_PASSWORD
+PROXYCONF"
+    else
+      # Without authentication
+      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT
+PROXYCONF"
+    fi
+  fi
+fi
+
 echo "🚀 Starting Claude Code..."
 echo "Press Ctrl+C to drop to bash shell"
 echo ""
@@ -917,6 +957,46 @@ echo "Type 'exit' to end the session"
 echo ""
 exec /bin/bash`
         : `#!/bin/bash
+# Configure proxychains4 if proxy settings are provided
+if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
+  if [ ! -f /etc/proxychains4/proxychains.conf ]; then
+    echo "Setting up proxychains4 configuration..."
+    sudo mkdir -p /etc/proxychains4
+    # Check if proxy host is host.docker.internal and resolve it
+    RESOLVED_PROXY_HOST="$SOCKS5_PROXY_HOST"
+    if [ "$SOCKS5_PROXY_HOST" = "host.docker.internal" ]; then
+      RESOLVED_PROXY_HOST=$(getent hosts host.docker.internal | awk '{ print $1 }')
+    fi
+    if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
+      # With authentication
+      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PROXY_PASSWORD
+PROXYCONF"
+    else
+      # Without authentication
+      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT
+PROXYCONF"
+    fi
+  fi
+fi
+
 echo "Welcome to Claude Code Sandbox!"
 if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
   echo "🔐 Proxy configuration detected"
