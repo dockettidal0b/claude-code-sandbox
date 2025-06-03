@@ -95,6 +95,7 @@ RUN apt-get update && apt-get install -y \\
     vim \\
     ca-certificates \\
     gnupg \\
+    proxychains4 \\
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
@@ -393,6 +394,20 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
     }
     if (this.config.bashTimeout) {
       env.push(`BASH_MAX_TIMEOUT_MS=${this.config.bashTimeout}`);
+    }
+
+    // Add proxy environment variables from process env
+    if (process.env.SOCKS5_PROXY_HOST) {
+      env.push(`SOCKS5_PROXY_HOST=${process.env.SOCKS5_PROXY_HOST}`);
+    }
+    if (process.env.SOCKS5_PROXY_PORT) {
+      env.push(`SOCKS5_PROXY_PORT=${process.env.SOCKS5_PROXY_PORT}`);
+    }
+    if (process.env.SOCKS5_PROXY_USERNAME) {
+      env.push(`SOCKS5_PROXY_USERNAME=${process.env.SOCKS5_PROXY_USERNAME}`);
+    }
+    if (process.env.SOCKS5_PROXY_PASSWORD) {
+      env.push(`SOCKS5_PROXY_PASSWORD=${process.env.SOCKS5_PROXY_PASSWORD}`);
     }
 
     // Add custom environment variables
@@ -879,19 +894,35 @@ echo "🚀 Starting Claude Code..."
 echo "Press Ctrl+C to drop to bash shell"
 echo ""
 
-# Run Claude but don't replace the shell process
-claude --dangerously-skip-permissions
+# Check if proxy is configured
+if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
+  echo "🔐 Proxy configuration detected, using proxychains4..."
+  # Run Claude with proxychains4
+  proxychains4 -q claude --dangerously-skip-permissions
+else
+  # Run Claude without proxy
+  claude --dangerously-skip-permissions
+fi
 
 # After Claude exits, drop to bash
 echo ""
 echo "Claude exited. You're now in bash shell."
-echo "Type 'claude --dangerously-skip-permissions' to restart Claude"
+if [ -n "$SOCKS5_PROXY_HOST" ]; then
+  echo "Type 'proxychains4 -q claude --dangerously-skip-permissions' to restart Claude with proxy"
+else
+  echo "Type 'claude --dangerously-skip-permissions' to restart Claude"
+fi
 echo "Type 'exit' to end the session"
 echo ""
 exec /bin/bash`
         : `#!/bin/bash
 echo "Welcome to Claude Code Sandbox!"
-echo "Type 'claude --dangerously-skip-permissions' to start Claude Code"
+if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
+  echo "🔐 Proxy configuration detected"
+  echo "Type 'proxychains4 -q claude --dangerously-skip-permissions' to start Claude Code with proxy"
+else
+  echo "Type 'claude --dangerously-skip-permissions' to start Claude Code"
+fi
 echo "Type 'exit' to end the session"
 echo ""
 exec /bin/bash`;
@@ -906,6 +937,39 @@ exec /bin/bash`;
         git config --global --add safe.directory /workspace &&
         # Clean up macOS resource fork files in git pack directory
         find .git/objects/pack -name "._pack-*.idx" -type f -delete 2>/dev/null || true &&
+        # Configure proxychains4 if proxy settings are provided
+        if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
+          echo "Configuring proxychains4..." &&
+          sudo mkdir -p /etc/proxychains4 &&
+          if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
+            # With authentication
+            sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $SOCKS5_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PROXY_PASSWORD
+PROXYCONF"
+          else
+            # Without authentication
+            sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+strict_chain
+proxy_dns
+remote_dns_subnet 224
+tcp_read_time_out 15000
+tcp_connect_time_out 8000
+localnet 127.0.0.0/255.0.0.0
+
+[ProxyList]
+socks5 $SOCKS5_PROXY_HOST $SOCKS5_PROXY_PORT
+PROXYCONF"
+          fi &&
+          echo "✓ Proxychains4 configured"
+        fi &&
         # Configure git to use GitHub token if available
         if [ -n "$GITHUB_TOKEN" ]; then
           git config --global url."https://\${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"

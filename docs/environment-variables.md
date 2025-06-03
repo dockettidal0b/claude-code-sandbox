@@ -194,6 +194,15 @@ These variables have special meaning in Claude Sandbox:
 - `GIT_AUTHOR_NAME` - Git commit author name
 - `GIT_AUTHOR_EMAIL` - Git commit author email
 
+### Proxy Configuration
+
+- `SOCKS5_PROXY_HOST` - SOCKS5 proxy hostname or IP address
+- `SOCKS5_PROXY_PORT` - SOCKS5 proxy port number
+- `SOCKS5_PROXY_USERNAME` - SOCKS5 proxy username (optional)
+- `SOCKS5_PROXY_PASSWORD` - SOCKS5 proxy password (optional)
+
+When proxy settings are provided, Claude Code will automatically run through proxychains4.
+
 ### System Configuration
 
 - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` - Always set to 1
@@ -258,3 +267,30 @@ echo $MY_VAR
   }
 }
 ```
+
+### Using SOCKS5 Proxy
+
+To run Claude Code through a SOCKS5 proxy:
+
+```bash
+# Set proxy environment variables
+export SOCKS5_PROXY_HOST="proxy.example.com"
+export SOCKS5_PROXY_PORT="1080"
+export SOCKS5_PROXY_USERNAME="myuser"  # Optional
+export SOCKS5_PROXY_PASSWORD="mypass"  # Optional
+
+# Run Claude Sandbox
+claude-sandbox
+```
+
+Or configure in `.env` file:
+
+```bash
+# .env
+SOCKS5_PROXY_HOST=proxy.example.com
+SOCKS5_PROXY_PORT=1080
+SOCKS5_PROXY_USERNAME=myuser
+SOCKS5_PROXY_PASSWORD=mypass
+```
+
+When proxy settings are detected, Claude Code will automatically run through proxychains4 with the configured SOCKS5 proxy.
