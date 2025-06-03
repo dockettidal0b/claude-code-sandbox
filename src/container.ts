@@ -893,7 +893,7 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
         ? `#!/bin/bash
 # Configure proxychains4 if proxy settings are provided
 if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
-  if [ ! -f /etc/proxychains4/proxychains.conf ]; then
+  if [ ! -f /etc/proxychains.conf ]; then
     echo "Setting up proxychains4 configuration..."
     sudo mkdir -p /etc/proxychains4
     # Check if proxy host is host.docker.internal and resolve it
@@ -903,7 +903,7 @@ if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
     fi
     if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
       # With authentication
-      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+      sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
@@ -916,7 +916,7 @@ socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PR
 PROXYCONF"
     else
       # Without authentication
-      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+      sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
@@ -959,7 +959,7 @@ exec /bin/bash`
         : `#!/bin/bash
 # Configure proxychains4 if proxy settings are provided
 if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
-  if [ ! -f /etc/proxychains4/proxychains.conf ]; then
+  if [ ! -f /etc/proxychains.conf ]; then
     echo "Setting up proxychains4 configuration..."
     sudo mkdir -p /etc/proxychains4
     # Check if proxy host is host.docker.internal and resolve it
@@ -969,7 +969,7 @@ if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
     fi
     if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
       # With authentication
-      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+      sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
@@ -982,7 +982,7 @@ socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PR
 PROXYCONF"
     else
       # Without authentication
-      sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+      sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
@@ -1030,7 +1030,7 @@ exec /bin/bash`;
           fi &&
           if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
             # With authentication
-            sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+            sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
@@ -1043,7 +1043,7 @@ socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PR
 PROXYCONF"
           else
             # Without authentication
-            sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
+            sudo bash -c "cat > /etc/proxychains.conf << 'PROXYCONF'
 strict_chain
 proxy_dns
 remote_dns_subnet 224
