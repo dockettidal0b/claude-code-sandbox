@@ -294,3 +294,13 @@ SOCKS5_PROXY_PASSWORD=mypass
 ```
 
 When proxy settings are detected, Claude Code will automatically run through proxychains4 with the configured SOCKS5 proxy.
+
+**Note**: The container automatically maps `host.docker.internal` to the host machine's gateway IP. This allows you to:
+- Use `host.docker.internal` as the proxy host to connect to a proxy running on your host machine
+- Access other services running on your host machine from within the container
+
+Example for proxy running on host:
+```bash
+export SOCKS5_PROXY_HOST="host.docker.internal"
+export SOCKS5_PROXY_PORT="1080"
+```

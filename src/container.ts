@@ -252,6 +252,7 @@ exec claude --dangerously-skip-permissions' > /start-claude.sh && \\
         Binds: volumes,
         AutoRemove: false,
         NetworkMode: "bridge",
+        ExtraHosts: ["host.docker.internal:host-gateway"],
       },
       WorkingDir: "/workspace",
       Cmd: ["/bin/bash", "-l"],
@@ -941,6 +942,12 @@ exec /bin/bash`;
         if [ -n "$SOCKS5_PROXY_HOST" ] && [ -n "$SOCKS5_PROXY_PORT" ]; then
           echo "Configuring proxychains4..." &&
           sudo mkdir -p /etc/proxychains4 &&
+          # Check if proxy host is host.docker.internal and resolve it
+          RESOLVED_PROXY_HOST="$SOCKS5_PROXY_HOST"
+          if [ "$SOCKS5_PROXY_HOST" = "host.docker.internal" ]; then
+            RESOLVED_PROXY_HOST=$(getent hosts host.docker.internal | awk '{ print $1 }')
+            echo "✓ Resolved host.docker.internal to $RESOLVED_PROXY_HOST"
+          fi &&
           if [ -n "$SOCKS5_PROXY_USERNAME" ] && [ -n "$SOCKS5_PROXY_PASSWORD" ]; then
             # With authentication
             sudo bash -c "cat > /etc/proxychains4/proxychains.conf << 'PROXYCONF'
@@ -952,7 +959,7 @@ tcp_connect_time_out 8000
 localnet 127.0.0.0/255.0.0.0
 
 [ProxyList]
-socks5 $SOCKS5_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PROXY_PASSWORD
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT $SOCKS5_PROXY_USERNAME $SOCKS5_PROXY_PASSWORD
 PROXYCONF"
           else
             # Without authentication
@@ -965,7 +972,7 @@ tcp_connect_time_out 8000
 localnet 127.0.0.0/255.0.0.0
 
 [ProxyList]
-socks5 $SOCKS5_PROXY_HOST $SOCKS5_PROXY_PORT
+socks5 $RESOLVED_PROXY_HOST $SOCKS5_PROXY_PORT
 PROXYCONF"
           fi &&
           echo "✓ Proxychains4 configured"
